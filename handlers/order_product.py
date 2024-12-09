@@ -4,7 +4,7 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup,KeyboardButton
 
 import markups as btn
 import database.requests as rq
@@ -16,7 +16,7 @@ class Order(StatesGroup):
     company_contact = State()
     number_employee = State()
     time_drink_water = State()
-    liter_water = State()
+    water_litr = State()
 
 
 @order_router.message(F.text == '💴 Suv harid qlish')
@@ -51,6 +51,7 @@ async def order_company_number_employee(message:Message, state:FSMContext):
     await message.answer("How may days needed water:")
     await state.set_state(Order.time_drink_water)
 
+
 @order_router.message(Order.time_drink_water)
 async def order_company_time_drink(message:Message, state:FSMContext):
 
@@ -58,33 +59,61 @@ async def order_company_time_drink(message:Message, state:FSMContext):
     data = await state.get_data()
 
     lister_water = int(data["number_employee"]) * int(data["time_drink_water"]) * 0.6
-
     result = f'''
     Based our calculation:
     Number of employees:{data['number_employee']}
     Water needed in {data['time_drink_water']}
     ------------------------------------------
-    Our suggestion to buy {lister_water/18.9} ta 18.9 litr '''
+    Our suggestion to buy {round(lister_water/20)} ta 20 litr '''
 
     await message.answer(result)
 
-    await message.answer("How may litrs needed:")
-    await state.set_state(Order.liter_water)
+    await message.answer("How may litrs needed:", reply_markup=ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text = 'I am holding my orders'),
+                KeyboardButton(text = 'I choose your option'),
+            ]
+        ], resize_keyboard=True
+    ))
+    await state.set_state(Order.water_litr)
 
 
-@order_router.message(Order.liter_water)
-async def order_company_litr_water(message:Message, state:FSMContext):
-    await state.update_data(liter_water=message.text)
+@order_router.message(Order.water_litr, F.text == 'I am holding my orders')
+async def order_user_desire(message:Message, state:FSMContext):
     data = await state.get_data()
-    user = await rq.get_user(tg_id=message.from_user.id)
+    basket = await rq.get_basket(user_id=message.from_user.id)
 
-    await rq.create_product(company_name = data['company_name'],
-                            company_contact = data['company_contact'],
-                            number_employee = data['number_employee'],
-                            time_drink = data['time_drink_water'],
-                            litr_water = data['litr_water'],
-                            create_at = datetime.now(),
-                            user_id = user.id
-                            )
-    
+
+    await rq.create_order(user_id=message.from_user.id,
+                          company_name=data['company_name'],
+                          basket_id = basket['id'],
+                          company_contact = data['company_contact'],
+                          number_employee = data['number_employee'],
+                          time_drink = data['time_drink_water'],
+                          created_at = datetime.now(),
+                          )
     await state.clear()
+    await message.answer('Order successfully added, after 2 days later you will get', reply_markup=btn.main_keyboard)
+
+
+@order_router.message(Order.water_litr, F.text == 'I choose your option')
+async def order_user_recommend(message:Message, state:FSMContext):
+
+    data = await state.get_data()
+
+    product_litr = await rq.get_product_by_litr(20)
+    lister_water = int(data["number_employee"]) * int(data["time_drink_water"]) * 0.6
+    await rq.add_basket_item(user_id=message.from_user.id,product_id=product_litr['id'], quantity=round(lister_water/20))
+
+    basket = await rq.get_basket(user_id=message.from_user.id)
+    await rq.create_order(user_id=message.from_user.id,
+                          company_name=data['company_name'],
+                          basket_id = basket['id'],
+                          company_contact = data['company_contact'],
+                          number_employee = data['number_employee'],
+                          time_drink = data['time_drink_water'],
+                          created_at = datetime.now(),
+                          )
+    await state.clear()
+    await message.answer('Order successfully added, after 2 days later you will get', reply_markup=btn.main_keyboard)

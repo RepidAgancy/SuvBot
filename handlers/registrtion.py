@@ -1,12 +1,14 @@
+import logging
+
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 import markups as btn
 import database.requests as rq
-
+from utils.translation import translate as _
 
 regis_router = Router()
 
@@ -14,29 +16,24 @@ regis_router = Router()
 class UserFrom(StatesGroup):
     language = State()
     phone_number = State()
+
+class UserLang(StatesGroup):
+    case = State()
+    lang = State()
     
 
 @regis_router.message(Command('start'))
 async def start_run(message: Message, state: FSMContext):
-    if await rq.get_user(tg_id=message.from_user.id):
-        await message.answer("You are already on the page", reply_markup=btn.main_keyboard)
+    user = await rq.get_user(tg_id=message.from_user.id)
+    if user:
+        await message.answer(_("You are already on the page",user['lang']), reply_markup=btn.main_keyboard)
     else:
         await state.set_state(UserFrom.language)
         await message.answer(
             "Please select your language:",
             reply_markup=btn.langMenu,
         )
-
-# @regis_router.message(Command('cancel'))
-# @regis_router.message(F.text.casefold() == 'cancel')
-# async def cancel_handler(message: Message, state: FSMContext):
-#     current_state = await state.get_state()
-#     if current_state is None:
-#         return 
-#     logging.info("Cancelling state %r", current_state)
-#     await state.clear()
-#     await message.answer("Cancelled.",reply_markup=ReplyKeyboardRemove())
-
+        
 
 @regis_router.message(UserFrom.language, F.text)
 async def process_language(message: Message, state: FSMContext):
@@ -69,50 +66,42 @@ async def process_phone_number(message: Message, state: FSMContext):
     await state.update_data(phone_number=phone_number)
     data = await state.get_data()
     await rq.create_user(message.from_user.id, data['language'], data['phone_number'])
-    await message.answer("Welcome to real words")
+    await message.answer("Welcome to real words",reply_markup=btn.main_keyboard)
 
     await state.clear()
 
 
-# @regis_router.message(Registration.company_name)
-# async def process_company_name(message: Message, state: FSMContext):
-#     await state.update_data(company_name=message.text)
 
-#     await message.answer("Enter company contact:", reply_markup=btn.regis_btn_phone)
-
-#     await state.set_state(Registration.company_contact)
+@regis_router.message(F.text == '🛠 Sozlamalar')
+async def settings_user(message:Message):
+    await message.answer('Tilni tanlang', reply_markup=btn.change_lang)
 
 
-# @regis_router.message(Registration.company_contact)
-# async def process_company_contact(message: Message, state: FSMContext):
-#     await state.update_data(company_contact=message.text)
+@regis_router.message(F.text == '🇺🇿 Til')
+async def settings_user(message:Message, state:FSMContext):
 
-#     await message.answer("Enter number of employees:",reply_markup=btn.regis_btn)
-
-#     await state.set_state(Registration.number_employee)
+    await message.answer('Kerakli tilni tanglang', reply_markup=btn.langMenu)
+    await state.set_state(UserLang.lang)
 
 
-# @regis_router.message(Registration.number_employee)
-# async def process_number_employee(message: Message, state: FSMContext):
-#     await state.update_data(number_employee=message.text)
+@regis_router.message(UserLang.lang)
+async def handle_language_selection(message:Message, state:FSMContext):
+    languages = {
+        '🇬🇧 English': "en",
+        '🇺🇿 Uzbek': "uz",
+        '🇷🇺 Russian': "ru"
+    }
 
-#     await message.answer("Enter how many days will be enough for you:",reply_markup=btn.regis_btn)
-
-#     await state.set_state(Registration.time_drink_water)
-
-
-# @regis_router.message(Registration.time_drink_water)
-# async def process_time_drink_water(message: Message, state: FSMContext):
-#     await state.update_data(time_drink_water=message.text)
-
-#     # Final answer
-#     data = await state.get_data()
-#     await message.answer(f"Registration complete: {data}")
-
-#     # Clear the state
-#     await state.clear()
+    selected_language = message.text
+    if selected_language not in languages:
+        await message.answer("Iltimos, variantlardan birini tanlang.")
+        return
+    logging.info(languages[selected_language])
+    data = await rq.change_user_lang(tg_id=message.from_user.id, lang=languages[selected_language])
+    await message.answer(f"✅ Tayyor, muvaffaqiyatli o'zgartirildi!, {data['lang']}", reply_markup=ReplyKeyboardRemove())
+    await state.clear()
 
 
-
-
-
+@regis_router.message(F.text == 'Back')
+async def go_back(message:Message):
+    await message.answer('You come to the main home again', reply_markup=btn.main_keyboard)

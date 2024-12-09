@@ -38,13 +38,10 @@ main_keyboard = ReplyKeyboardMarkup(
 )
 
 
-async def product_options_keyboard(product_id: int):
-    return InlineKeyboardMarkup(inline_keyboard=[
+change_lang = ReplyKeyboardMarkup(
+    keyboard=[
         [
-            InlineKeyboardButton(text="🛒 Korzinka", callback_data=f"add_cart_{product_id}"),
-        ],
-        [
-            InlineKeyboardButton(text="➕ 1", callback_data=f"add_{product_id}"),
-            InlineKeyboardButton(text="➖ 1", callback_data=f"subtract_{product_id}"),
+            KeyboardButton(text='🇺🇿 Til')
         ]
-    ])
+    ], resize_keyboard=True
+)
