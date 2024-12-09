@@ -28,18 +28,21 @@ async def get_user(tg_id: int):
     async with async_session() as session:
         async with session.begin():
             result = await session.execute(select(User).filter(User.tg_id == tg_id))
-            user = result.scalars().first()  
-            return {'id':user.id, 'lang':user.language}
-        
+            user = result.scalar_one_or_none()
+            return {'id': user.id, 'lang': user.language} if user else None
 
 async def change_user_lang(tg_id:int, lang:str):
     async with async_session() as session:
         async with session.begin():
-            user = await session.execute(select(User).where(User.tg_id == tg_id))
-            users =  user.scalar_one_or_none()
-            users.language = lang
-            await session.commit()
-            return {'lang':users.language}
+            result = await session.execute(select(User).where(User.tg_id == tg_id))
+            user = result.scalar_one_or_none()  # Retrieve the user object
+            
+            if user:
+                user.language = lang  # Update the language
+                await session.commit()  # Commit the transaction
+
+            else:
+                raise ValueError("User not found")
 
 
 async def all_products_keyboard():
@@ -182,6 +185,48 @@ async def get_basket(user_id:int):
             result = basket.scalars().first()
             return {'id':result.id}
         
+
+async def get_all_orders():
+    async with async_session() as session:
+        async with session.begin():
+            # Perform the query to get both orders and basket items
+            query = (
+                select(Order, BasketItem)
+                .options(selectinload(BasketItem.product))
+                .join(BasketItem, BasketItem.basket_id == Order.basket_id)
+                .where(BasketItem.ordered == False, Order.is_checked == False)
+            )
+            result = await session.execute(query)
+
+            # Process the result asynchronously
+            order_items = {}
+            for order, basket_item in result.all():
+                # If the order is not already in the dictionary, add it
+                if order.id not in order_items:
+                    order_items[order.id] = {
+                        'order_id': order.id,
+                        'company_name': order.company_name,
+                        'company_contact': order.company_contact,
+                        'number_employee': order.number_employee,
+                        'time_drink': order.time_drink,
+                        'created_at': order.created_at,
+                        'products': []
+                    }
+                # Append product details to the products list
+                product = basket_item.product
+                order_items[order.id]['products'].append({
+                    'basket_id': basket_item.basket_id,
+                    'product_name': product.litrs,
+                    'quantity': basket_item.quantity,
+                    'price': product.price,
+                })
+
+            # Convert to a list of orders
+            return list(order_items.values())
+
+            
+
+
             
 
         

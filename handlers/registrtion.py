@@ -43,9 +43,10 @@ async def process_language(message: Message, state: FSMContext):
         '🇺🇿 Uzbek': "uz",
         '🇷🇺 Russian': "ru"
     }
+    user = await rq.get_user(tg_id=message.from_user.id)
 
     if message.text not in languages:
-        await message.answer("Please select a valid language from the options.")
+        await message.answer(_("Please select a valid language from the options.",user['lang']))
         return  
 
     await state.update_data(language=languages[message.text])
@@ -58,6 +59,7 @@ async def process_language(message: Message, state: FSMContext):
 @regis_router.message(UserFrom.phone_number)
 async def process_phone_number(message: Message, state: FSMContext):
 
+    user = await rq.get_user(tg_id=message.from_user.id)
     if message.contact:
         phone_number = message.contact.phone_number
     else:
@@ -79,13 +81,16 @@ async def settings_user(message:Message):
 
 @regis_router.message(F.text == '🇺🇿 Til')
 async def settings_user(message:Message, state:FSMContext):
+    user = await rq.get_user(tg_id=message.from_user.id)
 
-    await message.answer('Kerakli tilni tanglang', reply_markup=btn.langMenu)
+    await message.answer(_('Kerakli tilni tanglang',user['lang']), reply_markup=btn.langMenu)
     await state.set_state(UserLang.lang)
 
 
 @regis_router.message(UserLang.lang)
 async def handle_language_selection(message:Message, state:FSMContext):
+    user = await rq.get_user(tg_id=message.from_user.id)
+
     languages = {
         '🇬🇧 English': "en",
         '🇺🇿 Uzbek': "uz",
@@ -94,14 +99,16 @@ async def handle_language_selection(message:Message, state:FSMContext):
 
     selected_language = message.text
     if selected_language not in languages:
-        await message.answer("Iltimos, variantlardan birini tanlang.")
+        await message.answer(_("Please select a valid language from the options.",user['lang']))
         return
     logging.info(languages[selected_language])
-    data = await rq.change_user_lang(tg_id=message.from_user.id, lang=languages[selected_language])
-    await message.answer(f"✅ Tayyor, muvaffaqiyatli o'zgartirildi!, {data['lang']}", reply_markup=ReplyKeyboardRemove())
+    await rq.change_user_lang(tg_id=message.from_user.id, lang=languages[selected_language])
+    await message.answer(f"✅ {_('Language successfully changed',user['lang'])}", reply_markup=btn.main_keyboard)
     await state.clear()
 
 
 @regis_router.message(F.text == 'Back')
 async def go_back(message:Message):
-    await message.answer('You come to the main home again', reply_markup=btn.main_keyboard)
+
+    user = await rq.get_user(tg_id=message.from_user.id)
+    await message.answer(_('You come to the main home again',user['lang']), reply_markup=btn.main_keyboard)
