@@ -1,3 +1,5 @@
+import logging
+
 from asgiref.sync import sync_to_async
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -67,5 +69,7 @@ async def format_orders_for_message(orders):
             )
         
         messages.append(message)
+    logging.info(messages)
     
-    return "\n\n".join(messages)
+    
+    return messages

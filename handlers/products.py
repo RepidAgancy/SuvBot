@@ -91,8 +91,3 @@ async def message_substract_cart(callback:CallbackQuery):
     await callback.message.edit_text(updated_text, reply_markup=keyboard)
     
     await callback.answer("Item substracted")
-
-
-
-
-

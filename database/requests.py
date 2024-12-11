@@ -82,7 +82,6 @@ async def add_basket_item(product_id:int, user_id:int, quantity = 1):
     return {"message": "Basket item added successfully"}
 
 
-
 async def get_all_basket_items_with_products(user_id: int):
     async with async_session() as session:
         async with session.begin():
@@ -223,11 +222,18 @@ async def get_all_orders():
 
             # Convert to a list of orders
             return list(order_items.values())
+        
 
-            
+from datetime import datetime, timedelta
 
-
-            
+async def get_near_expiry_orders():
+    async with async_session() as session:
+        async with session.begin():
+            threshold_date = datetime.now() + timedelta(days=2)
+            expiring_orders = await session.execute(
+                select(Order).where(Order.created_at + timedelta(days=Order.time_drink) <= threshold_date)
+            )
+            return expiring_orders.scalars().all()
 
         
 
