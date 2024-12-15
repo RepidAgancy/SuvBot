@@ -62,7 +62,7 @@ async def format_orders_for_message(orders):
             f"📞 Contact: {order['company_contact']}\n"
             f"👥 Number of Employees: {order['number_employee']}\n"
             f"⏳ Drink Time: {order['time_drink']} mins\n"
-            f"🗓 Created At: {order['created_at']:%Y-%m-%d %H:%M:%S}\n"
+            f"🗓 Created At: {order['created_at']:%Y-%m-%d}\n"
             f"📦 Products:\n"
         )
         
@@ -74,8 +74,6 @@ async def format_orders_for_message(orders):
                 f"     💵 Price: {product['price']:.2f}\n"
             )
         
-        messages.append(message)
-    logging.info(messages)
-    
+        messages.append((message,order['order_id']))
     
     return messages

@@ -43,6 +43,7 @@ class Basket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # total_price = Column(Float, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="basket")
@@ -86,5 +87,12 @@ class Order(Base):
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+
+
+jobstores = {
+    'default': SQLAlchemyJobStore(url='sqlite:///jobs.db')  
+}
 
 asyncio.run(async_main())

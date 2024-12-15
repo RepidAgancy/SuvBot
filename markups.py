@@ -66,7 +66,6 @@ change_lang = ReplyKeyboardMarkup(
 )
 
 def get_order_keyboard_option(basket):
-    logging.info(basket)
     buttons = []
     if basket:
         buttons.append(KeyboardButton(text='I am holding my orders'))
@@ -111,5 +110,8 @@ admin_keyboard = ReplyKeyboardMarkup(
             KeyboardButton(text='Barcha mahsulotlar'),
             KeyboardButton(text="Mahsulot qo'shish")
         ],
+        [
+            KeyboardButton(text='Barcha buyurtmalar')
+        ]
     ],resize_keyboard=True, input_field_placeholder='Nimadir kiriting...'
 )

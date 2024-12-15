@@ -186,7 +186,7 @@ async def get_product_by_litr(product_name: str):
         async with session.begin():
             result = await session.execute(select(Product).where(Product.name == product_name))
             product =  result.scalars().first()
-            return {'id':product.id}
+            return {'id':product.id,'image':product.image, 'price':product.price, 'name':product.name}
         
 
 async def create_order(*args, **kwargs):
@@ -221,8 +221,9 @@ async def get_all_orders():
                 select(Order, BasketItem)
                 .options(selectinload(BasketItem.product))
                 .join(BasketItem, BasketItem.basket_id == Order.basket_id)
-                .where(BasketItem.ordered == False, Order.is_checked == False)
+                .where(BasketItem.ordered == True, Order.is_checked == False)
             )
+
             result = await session.execute(query)
 
             # Process the result asynchronously
@@ -280,4 +281,25 @@ async def get_all_products():
             all_product = await session.execute(select(Product))
             results = all_product.scalars().all()
             return [{'id':result.id, 'name':result.name, 'price':result.price, 'image':result.image} for result in results]
+        
+        
+async def get_order_by_notify_user(datetime:datetime):
+    async with async_session() as session:
+        async with session.begin():
+            results = await session.execute(select(Order).where(Order.notify_user==datetime))
+            orders = results.scalars().all()
+            return [
+                {'id':result.id,
+                 'user_id':result.user_id,
+                 'notify_user':result.notify_user
+                 }
+                 for result in orders
+            ]
 
+
+async def order_make_done(order_id:int):
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(select(Order).where(Order.id == order_id))
+            order = result.scalars().first()
+            order.is_checked = True

@@ -22,8 +22,15 @@ async def all_product(message:Message, state:FSMContext):
 
 @product_router.message(ProductBasket.name, F.text)
 async def handle_product_selection(message: Message, state:FSMContext):
-    produc_id = await rq.get_product_by_litr(message.text)
-    await state.update_data(name=produc_id['id'])
+    product = await rq.get_product_by_litr(message.text)
+    text = f'''
+        Nomi: {product['name']}
+
+
+    Narxi: {product['price']}
+    '''
+    await message.answer_photo(photo=product['image'], caption=text)
+    await state.update_data(name=product['id'])
     await message.answer('Nechta kerak', reply_markup=btn.quantity_water_keyboard)
     await state.set_state(ProductBasket.quantity)
 

@@ -73,3 +73,27 @@ async def add_product_image(message:Message, state:FSMContext):
                          image=data['image'])
     await message.answer(msg['message'])
     await state.clear()
+
+
+@admin_router.message(F.text == 'Barcha buyurtmalar')
+async def all_orders_admin(message:Message):
+    orders = await rq.get_all_orders()
+    logging.info(orders)
+    messages_order = await syn.format_orders_for_message(orders)
+    
+    for data, id in messages_order:
+        await message.answer(data, reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text='Bajarildi', callback_data=f'done_{id}')
+                ]
+            ]
+        ))
+
+@admin_router.callback_query(F.data.contains('done_'))
+async def done_order_products(callback:CallbackQuery):
+    id = callback.data[5:]
+
+    await rq.order_make_done(int(id))
+    await callback.answer('Product succeessfully bajarildi')
+    await callback.message.delete()

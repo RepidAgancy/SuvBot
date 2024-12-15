@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from aiogram import Router, F
@@ -136,19 +136,10 @@ async def choose_product_order(message:Message, state:FSMContext):
     await message.answer('Choose product and continue', reply_markup=await rq.all_products_keyboard())
     await state.set_state(Order.product_show)
 
-# @order_router.message(Order.product_add,F.text == 'I am holding my orders')
-# async def product_finish_user_desire(state:FSMContext):
-#     await state.set_state(Order.product_finish)
-
-
-# @order_router.message(Order.product_add,F.text == 'I choose your option')
-# async def product_finish_user_desire(state:FSMContext):
-#     await state.set_state(Order.product_finish)
-
 
 @order_router.message(Order.product_show)
 async def adding_product(message:Message, state:FSMContext):
-    await state.update_data(product_add=message.text[:-1])
+    await state.update_data(product_add=message.text)
     await message.answer("How many do you need Jigar", reply_markup=btn.quantity_water_keyboard)
     await state.set_state(Order.product_qun)
 
@@ -176,8 +167,6 @@ async def order_product_quantity(message:Message, state:FSMContext):
         
         await message.answer("Processing your order...")
         data = await state.get_data()
-
-        # Fetch the basket and create an order
         basket = await rq.get_basket(user_id=message.from_user.id)
 
         if not basket:
@@ -192,8 +181,9 @@ async def order_product_quantity(message:Message, state:FSMContext):
             number_employee=data['number_employee'],
             time_drink=data['time_drink_water'],
             created_at=datetime.now(),
+            notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2)
         )
-        await state.clear()  # Clear the state after successful order creation
+        await state.clear() 
         await message.answer(
             "Order successfully added! Delivery will take place in 2 days.",
             reply_markup=btn.main_keyboard
@@ -203,38 +193,6 @@ async def order_product_quantity(message:Message, state:FSMContext):
     except Exception as e:
         logging.error(f"Error in order_product_quantity: {e}")
         await message.answer("An error occurred. Please try again.")
-
-
-# @order_router.message(Order.product_finish, F.text)
-# async def order_user_desired(message: Message, state: FSMContext):
-#     try:
-#         await message.answer("Processing your order...")
-#         data = await state.get_data()
-
-#         # Fetch the basket and create an order
-#         basket = await rq.get_basket(user_id=message.from_user.id)
-
-#         if not basket:
-#             await message.answer("Error: Basket not found.")
-#             return
-
-#         await rq.create_order(
-#             user_id=message.from_user.id,
-#             company_name=data['company_name'],
-#             basket_id=basket['id'],
-#             company_contact=data['company_contact'],
-#             number_employee=data['number_employee'],
-#             time_drink=data['time_drink_water'],
-#             created_at=datetime.now(),
-#         )
-#         await state.clear()  # Clear the state after successful order creation
-#         await message.answer(
-#             "Order successfully added! Delivery will take place in 2 days.",
-#             reply_markup=btn.main_keyboard
-#         )
-#     except Exception as e:
-#         logging.error(f"Error in order_user_desired: {e}")
-#         await message.answer("An error occurred while processing your order. Please try again.")
 
 
 @order_router.message(Order.product_add, F.text == 'I am holding my orders')
@@ -251,6 +209,7 @@ async def order_user_desire(message:Message, state:FSMContext):
                           number_employee = data['number_employee'],
                           time_drink = data['time_drink_water'],
                           created_at = datetime.now(),
+                          notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2)
                           )
     await state.clear()
     await message.answer('Order successfully added, after 2 days later you will get', reply_markup=btn.main_keyboard)
@@ -261,9 +220,9 @@ async def order_user_recommend(message:Message, state:FSMContext):
 
     data = await state.get_data()
 
-    product_litr = await rq.get_product_by_litr(20)
+    product_litr = await rq.get_product_by_litr('18.9L Suv')
     lister_water = int(data["number_employee"]) * int(data["time_drink_water"]) * 0.6
-    await rq.add_basket_item(user_id=message.from_user.id,product_id=product_litr['id'], quantity=round(lister_water/20))
+    await rq.add_basket_item(user_id=message.from_user.id,product_id=product_litr['id'], quantity=round(lister_water/18.9))
 
     basket = await rq.get_basket(user_id=message.from_user.id)
     await rq.create_order(user_id=message.from_user.id,
@@ -273,10 +232,7 @@ async def order_user_recommend(message:Message, state:FSMContext):
                           number_employee = data['number_employee'],
                           time_drink = data['time_drink_water'],
                           created_at = datetime.now(),
+                          notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2)
                           )
     await state.clear()
     await message.answer('Order successfully added, after 2 days later you will get', reply_markup=btn.main_keyboard)
-
-
-# async def send_user_notification(bot=bot, message:Message):
-#     await bot.send_message(message.from_user.id, 'Hello jiggararatg tinch mi charchamasdan')
