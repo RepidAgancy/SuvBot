@@ -108,7 +108,8 @@ async def handle_language_selection(message:Message, state:FSMContext):
 
 
 @regis_router.message(F.text == 'Back')
-async def go_back(message:Message):
+async def go_back(message:Message, state:FSMContext):
 
     user = await rq.get_user(tg_id=message.from_user.id)
     await message.answer(_('You come to the main home again',user['lang']), reply_markup=btn.main_keyboard)
+    await state.clear()

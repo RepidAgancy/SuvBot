@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta
+
 from database.models import async_session
 from database.models import User, Order, Product, Basket,BasketItem
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import func
 from database.sync_to_async import get_all_items
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
@@ -30,6 +33,17 @@ async def get_user(tg_id: int):
             result = await session.execute(select(User).filter(User.tg_id == tg_id))
             user = result.scalar_one_or_none()
             return {'id': user.id, 'lang': user.language} if user else None
+        
+
+async def get_all_orders_user():
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                select(Order))
+            order_result = result.scalars().all()
+            # orders = [{'user_id': order.user.id, 'created_at': order.created_at} for order in order_result]
+            return [{'user_id':order.user_id, 'created_at':order.created_at} for order in order_result]
+        
 
 async def change_user_lang(tg_id:int, lang:str):
     async with async_session() as session:
@@ -49,13 +63,13 @@ async def all_products_keyboard():
     async with async_session() as session:
         async with session.begin():
             # Fetch only necessary fields from the database
-            result = await session.execute(select(Product.id, Product.litrs))
+            result = await session.execute(select(Product.id, Product.name))
             products = result.all()  # Returns a list of tuples (id, liters)
 
     keyboard = []
     row = []
     for i, (product_id, name) in enumerate(products, start=1):
-        row.append(KeyboardButton(text=f"{name}L"))  # Use `liters` directly
+        row.append(KeyboardButton(text=f"{name}"))  # Use `liters` directly
 
         if i % 2 == 0 or i == len(products):
             keyboard.append(row)
@@ -65,7 +79,10 @@ async def all_products_keyboard():
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
-async def add_basket_item(product_id:int, user_id:int, quantity = 1):
+# async def add_product_quantity(basket_item_id:int)
+
+
+async def add_basket_item(product_id:int, user_id:int, quantity:int):
     async with async_session() as session:
         async with session.begin():
             basket_query = await session.execute(select(Basket).where(Basket.user_id == user_id))
@@ -125,8 +142,8 @@ async def add_cart_quantity(basket_id: int):
             result = await session.execute(select(BasketItem).where(BasketItem.id == basket_id))
             basket_item = result.scalar_one_or_none()
             basket_item.quantity += 1
-    
-        
+            
+            
 async def substratc_cart_quantity(basket_id: int):
     async with async_session() as session:
         async with session.begin():
@@ -136,7 +153,7 @@ async def substratc_cart_quantity(basket_id: int):
             basket_item.quantity -= 1
 
 
-async def get_basket_item(basket_id:int):
+async def get_basket_item_change(basket_id:int):
     async with async_session() as session:
         async with session.begin():
             result = await session.execute(select(BasketItem).where(BasketItem.id == basket_id))
@@ -146,6 +163,16 @@ async def get_basket_item(basket_id:int):
             return {'id':basket_item.id ,'quantity':basket_item.quantity,'total_price':basket_item.quantity*product_price.price}
             
 
+async def get_basket_item(user_id:int):
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                select(BasketItem)
+                .join(Basket)  # Join the BasketItem with Basket
+                .where(BasketItem.ordered == False, Basket.user_id == user_id)
+            )
+            return result.scalars().first()
+
 async def create_product(*args):
     async with async_session() as session:
         async with session.begin():
@@ -154,10 +181,10 @@ async def create_product(*args):
             await session.commit()
         
 
-async def get_product_by_litr(product_litr: int):
+async def get_product_by_litr(product_name: str):
     async with async_session() as session:
         async with session.begin():
-            result = await session.execute(select(Product).where(Product.litrs == int(product_litr)))
+            result = await session.execute(select(Product).where(Product.name == product_name))
             product =  result.scalars().first()
             return {'id':product.id}
         
@@ -176,6 +203,7 @@ async def create_order(*args, **kwargs):
                 basket_item.ordered = True
 
             await session.commit()
+
 
 async def get_basket(user_id:int):
     async with async_session() as session:
@@ -215,7 +243,7 @@ async def get_all_orders():
                 product = basket_item.product
                 order_items[order.id]['products'].append({
                     'basket_id': basket_item.basket_id,
-                    'product_name': product.litrs,
+                    'product_name': product.name,
                     'quantity': basket_item.quantity,
                     'price': product.price,
                 })
@@ -224,18 +252,32 @@ async def get_all_orders():
             return list(order_items.values())
         
 
-from datetime import datetime, timedelta
-
 async def get_near_expiry_orders():
     async with async_session() as session:
         async with session.begin():
-            threshold_date = datetime.now() + timedelta(days=2)
-            expiring_orders = await session.execute(
-                select(Order).where(Order.created_at + timedelta(days=Order.time_drink) <= threshold_date)
+            # Get orders where the `is_checked` field is True
+            expiring_orders = await session.execute(select(Order).where(Order.is_checked == True))
+            result = expiring_orders.scalars().all()
+            return result
+        
+
+async def add_product(name:str, price:float, image):
+    async with async_session() as session:
+        async with session.begin():
+            product = Product(
+                name=name,
+                price=price,
+                image=image
             )
-            return expiring_orders.scalars().all()
-
+            session.add(product)
+            await session.commit()
+            return {'message':"Product added successfuly"}
         
 
-        
+async def get_all_products():
+    async with async_session() as session:
+        async with session.begin():
+            all_product = await session.execute(select(Product))
+            results = all_product.scalars().all()
+            return [{'id':result.id, 'name':result.name, 'price':result.price, 'image':result.image} for result in results]
 

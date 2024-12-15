@@ -1,59 +1,75 @@
+import logging
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 
 from utils.filters import AdminFilter
 from utils.ppginator import Paginator
+import markups as btn
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 import database.requests as rq
 import database.sync_to_async as syn
 
 ADMIN_IDS = [5714872865]
 
+class ProductAdd(StatesGroup):
+    name = State()
+    price = State()
+    image = State()
+
 admin_router = Router()
 
 admin_router.message.filter(AdminFilter(admin_ids=ADMIN_IDS))
 
-paginator = None
-
-async def pagination_keyboard():
-    buttons = []
-    if paginator.page > 1:
-        buttons.append(InlineKeyboardButton(text = "◀ Prev", callback_data="prev"))
-    if paginator.page < paginator.pages:
-        buttons.append(InlineKeyboardButton(text = "Next ▶", callback_data="next"))
-    return InlineKeyboardMarkup(inline_keyboard=[buttons])
-
-
 @admin_router.message(Command("start"))
 async def run_as_admin(message: Message):
-    global paginator
-
-    data = await rq.get_all_orders()
-    formatted_messages = await syn.format_orders_for_message(data)
-
-    # Initialize paginator with data
-    paginator = Paginator(formatted_messages, per_page=1)
-
-    # Send the first page
-    current_page = paginator.get_page()
-    await message.answer(
-        current_page[0], reply_markup=await pagination_keyboard()
-    )
+    await message.answer('You are on the main page',reply_markup=btn.admin_keyboard)
 
 
-@admin_router.callback_query(F.data.in_({"prev", "next"}))
-async def handle_pagination(callback: CallbackQuery):
-    global paginator
+@admin_router.message(F.text == 'Barcha mahsulotlar')
+async def all_products(message:Message):
+    products = await rq.get_all_products()
+    logging.info(products)
+    for product in products:
+        await message.answer_photo(photo=product['image'], caption=f"Nomi: {product['name']}\nNarxi: {product['price']} so'm")
 
-    if callback.data == "next":
-        paginator.get_next()
-    elif callback.data == "prev":
-        paginator.get_previous()
 
-    current_page = paginator.get_page()
-    
-    await callback.message.edit_text(
-        current_page[0], reply_markup=await pagination_keyboard()
-    )
-    await callback.answer()
+@admin_router.message(StateFilter(None), F.text=="Mahsulot qo'shish")
+async def add_product_admin(message:Message, state:FSMContext):
+    await message.answer('Tovarni nomini kiriting')
+    await state.set_state(ProductAdd.name)
+
+
+@admin_router.message(ProductAdd.name)
+async def add_product_name(message:Message, state:FSMContext):
+    if len(message.text) >= 100:
+        await message.reply('100 dan ortiq bolmagan so\'z kiriting')
+        return
+    await state.update_data(name=message.text)
+    await message.answer('Tovarni narxini qoshing')
+    await state.set_state(ProductAdd.price)
+
+
+@admin_router.message(ProductAdd.price)
+async def add_product_price(message:Message, state:FSMContext):
+    if not message.text.isdigit():
+        await message.reply('Iltimos jigar faqat sonlar kirit')
+        return 
+    await state.update_data(price=message.text)
+    await message.answer('Tovarni rasmnini tashang')
+    await state.set_state(ProductAdd.image)
+
+
+@admin_router.message(ProductAdd.image)
+async def add_product_image(message:Message, state:FSMContext):
+    await state.update_data(image=message.photo[-1].file_id)
+    await message.answer('Tovar muvvaffaqiyatli qoshildi')
+    data = await state.get_data()
+    msg = await rq.add_product(name=data['name'],
+                         price=data['price'],
+                         image=data['image'])
+    await message.answer(msg['message'])
+    await state.clear()

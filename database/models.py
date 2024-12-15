@@ -1,6 +1,6 @@
 import asyncio
 
-from sqlalchemy import BigInteger, String, ForeignKey, Integer, DateTime, Boolean, Column, Float
+from sqlalchemy import BigInteger, String, ForeignKey, Integer, DateTime, Boolean, Column, Float, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
@@ -30,8 +30,9 @@ class Product(Base):
     __tablename__ = 'products'
 
     id = Column(Integer, primary_key=True, index=True)
-    litrs = Column(Integer, nullable=False)
+    name = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
+    image = Column(String, nullable=False)
 
     basket_items = relationship("BasketItem", back_populates="product")
 
@@ -75,6 +76,7 @@ class Order(Base):
     number_employee = Column(Integer, nullable=False)
     time_drink = Column(Integer, nullable=False)
     created_at = Column(DateTime)
+    notify_user = Column(DateTime)
     is_checked = Column(Boolean, default=False)
     
     # Relationships

@@ -14,8 +14,9 @@ def get_all_items(items):
                     "quantity": item.quantity,
                     "product": {
                         "id": item.product.id,
-                        "liters": item.product.litrs,
+                        "name": item.product.name,
                         "price": item.product.price,
+                        'image':item.product.image
                     },
                 }
                 for item in items
@@ -29,22 +30,27 @@ def get_basket_inline_btn(basket_items):
     for i in range(len(basket_items['items'])): 
         item = basket_items['items'][i]  
         
-        result = f"Product: {item['product']['liters']}L\n" \
-                    f"Quantity: {item['quantity']}\n" \
-                    f"Price per item: {item['product']['price']} UZS\n" \
-                    f"Total: {item['product']['price'] * item['quantity']} UZS\n\n"
+        text = (
+            f"🛍 Product: {item['product']['name']}\n"
+            f"📦 Quantity: {item['quantity']}\n"
+            f"💰 Price per item: {item['product']['price']} UZS\n"
+            f"🔢 Total: {item['product']['price'] * item['quantity']} UZS\n"
+        )
         
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="❌ Delete", callback_data=f"delete_cart_{item['id']}"),
-        ],
-        [
-            InlineKeyboardButton(text="➕ 1", callback_data=f"add_{item['id']}"),
-            InlineKeyboardButton(text="➖ 1", callback_data=f"subtract_{item['id']}"),
+        inline_buttons = [
+            [
+                InlineKeyboardButton(text="❌ Delete", callback_data=f"delete_cart_{item['id']}"),
+            ],
+            [
+                InlineKeyboardButton(text="➕ 1", callback_data=f"add_{item['id']}"),
+                InlineKeyboardButton(text="➖ 1", callback_data=f"subtract_{item['id']}"),
+            ]
         ]
-        ])
-        messages.append((result, keyboard))
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+        messages.append((text, item['product']['image'], keyboard))
     return messages
+
         
 
 async def format_orders_for_message(orders):
