@@ -32,7 +32,6 @@ async def run_as_admin(message: Message):
 @admin_router.message(F.text == 'Barcha mahsulotlar')
 async def all_products(message:Message):
     products = await rq.get_all_products()
-    logging.info(products)
     for product in products:
         await message.answer_photo(photo=product['image'], caption=f"Nomi: {product['name']}\nNarxi: {product['price']} so'm")
 
@@ -78,8 +77,8 @@ async def add_product_image(message:Message, state:FSMContext):
 @admin_router.message(F.text == 'Barcha buyurtmalar')
 async def all_orders_admin(message:Message):
     orders = await rq.get_all_orders()
-    logging.info(orders)
     messages_order = await syn.format_orders_for_message(orders)
+    # logging.info(messages_order)
     
     for data, id in messages_order:
         await message.answer(data, reply_markup=InlineKeyboardMarkup(
@@ -97,3 +96,14 @@ async def done_order_products(callback:CallbackQuery):
     await rq.order_make_done(int(id))
     await callback.answer('Product succeessfully bajarildi')
     await callback.message.delete()
+
+
+@admin_router.message(F.text == 'Buyurtmalar tarixi')
+async def all_ordered_products(message:Message):
+    orders = await rq.get_all_orders_done()
+    if not orders:
+        await message.answer("Buyurmalar tarixi yoq")
+        return 
+    messages_order = await syn.format_orders_for_message(orders)
+    for data,id in messages_order:
+        await message.answer(data)

@@ -3,6 +3,7 @@ import logging
 from asgiref.sync import sync_to_async
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from utils.translation import translate as _
 
 import markups as btn
 
@@ -25,21 +26,27 @@ def get_all_items(items):
 
 
 @sync_to_async
-def get_basket_inline_btn(basket_items):
+def get_basket_inline_btn(basket_items,lang):
     messages = []
     for i in range(len(basket_items['items'])): 
         item = basket_items['items'][i]  
         
-        text = (
-            f"🛍 Product: {item['product']['name']}\n"
-            f"📦 Quantity: {item['quantity']}\n"
-            f"💰 Price per item: {item['product']['price']} UZS\n"
-            f"🔢 Total: {item['product']['price'] * item['quantity']} UZS\n"
+        text = _(
+           ''' 
+🛍 Product: {name}
+📦 Quantity: {quantity}
+💰 Price per item: {price} UZS
+🔢 Total: {total} UZS''',lang
+        ).format(
+            name=item['product']['name'],
+            quantity=item['quantity'],
+            price=item['product']['price'],
+            total=item['product']['price'] * item['quantity']
         )
         
         inline_buttons = [
             [
-                InlineKeyboardButton(text="❌ Delete", callback_data=f"delete_cart_{item['id']}"),
+                InlineKeyboardButton(text=_("❌ Delete",lang), callback_data=f"delete_cart_{item['id']}"),
             ],
             [
                 InlineKeyboardButton(text="➕ 1", callback_data=f"add_{item['id']}"),
@@ -62,6 +69,7 @@ async def format_orders_for_message(orders):
             f"📞 Contact: {order['company_contact']}\n"
             f"👥 Number of Employees: {order['number_employee']}\n"
             f"⏳ Drink Time: {order['time_drink']} mins\n"
+            f"📍 Location: {order['location']}\n"
             f"🗓 Created At: {order['created_at']:%Y-%m-%d}\n"
             f"📦 Products:\n"
         )

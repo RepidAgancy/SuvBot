@@ -19,6 +19,8 @@ class User(Base):
     id = Column(Integer,primary_key=True)
     tg_id = Column(BigInteger)
     language = Column(String)
+    company_name = Column(String, nullable=True)
+    user_type = Column(String)
     phone_number = Column(String)
 
     orders = relationship("Order", back_populates='user')
@@ -43,7 +45,8 @@ class Basket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # total_price = Column(Float, nullable=True)
+    ordered = Column(Boolean, default=False)
+    total_price = Column(Integer, default=0)
 
     # Relationships
     user = relationship("User", back_populates="basket")
@@ -72,10 +75,9 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     basket_id = Column(Integer, ForeignKey('baskets.id'), nullable=False)
-    company_name = Column(String, nullable=False)
-    company_contact = Column(String, nullable=False)
     number_employee = Column(Integer, nullable=False)
     time_drink = Column(Integer, nullable=False)
+    location = Column(String, nullable=False)
     created_at = Column(DateTime)
     notify_user = Column(DateTime)
     is_checked = Column(Boolean, default=False)
@@ -87,12 +89,5 @@ class Order(Base):
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-
-
-jobstores = {
-    'default': SQLAlchemyJobStore(url='sqlite:///jobs.db')  
-}
 
 asyncio.run(async_main())

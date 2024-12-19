@@ -1,9 +1,13 @@
+import logging
+
 from datetime import datetime, timedelta
 
 from database.models import async_session
 from database.models import User, Order, Product, Basket,BasketItem
+from apscheduler.triggers.date import DateTrigger
 
-from sqlalchemy import select
+from utils.translation import translate as _
+from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
 from database.sync_to_async import get_all_items
@@ -19,10 +23,10 @@ async def set_user(tg_id: int):
             await session.commit()
 
 
-async def create_user(tg_id: int, language: str, phone_number: str):
+async def create_user(tg_id: int, language: str, phone_number: str, company_name:str, user_type:str):
     async with async_session() as session:
         async with session.begin():
-            user = User(tg_id=tg_id, language=language, phone_number=phone_number)
+            user = User(tg_id=tg_id, language=language, phone_number=phone_number,company_name=company_name, user_type=user_type)
             session.add(user)
             await session.commit()
 
@@ -59,7 +63,7 @@ async def change_user_lang(tg_id:int, lang:str):
                 raise ValueError("User not found")
 
 
-async def all_products_keyboard():
+async def all_products_keyboard(lang):
     async with async_session() as session:
         async with session.begin():
             # Fetch only necessary fields from the database
@@ -74,24 +78,46 @@ async def all_products_keyboard():
         if i % 2 == 0 or i == len(products):
             keyboard.append(row)
             row = []  
-    keyboard.append([KeyboardButton(text='Back')])
+    keyboard.append([KeyboardButton(text=_('Back',lang))])
 
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-
-
-# async def add_product_quantity(basket_item_id:int)
 
 
 async def add_basket_item(product_id:int, user_id:int, quantity:int):
     async with async_session() as session:
         async with session.begin():
-            basket_query = await session.execute(select(Basket).where(Basket.user_id == user_id))
+            basket_query = await session.execute(select(Basket).where(Basket.user_id == user_id, Basket.ordered == False))
             basket = basket_query.scalars().first()
 
             if not basket:
                 basket = Basket(user_id=user_id)
                 session.add(basket)
                 await session.flush()
+
+            product = await session.execute(select(Product).where(Product.id == product_id))
+            result = product.scalars().first()
+            basket.total_price += int(result.price) * quantity
+
+            basket_item = BasketItem(product_id=product_id,quantity=quantity,basket_id=basket.id,)
+            session.add(basket_item)
+            await session.commit()
+    return {"message": "Basket item added successfully"}
+
+
+async def add_basket_item_user_desire(product_id:int, user_id:int, quantity:int):
+    async with async_session() as session:
+        async with session.begin():
+            basket = Basket(user_id=user_id)
+            session.add(basket)
+            await session.flush()
+            basket_query = await session.execute(select(Basket)
+                                           .where(Basket.user_id==user_id, Basket.ordered==False)
+                                           .order_by(desc(Basket.id)))
+            basket = basket_query.scalar_one_or_none()
+
+            product = await session.execute(select(Product).where(Product.id == product_id))
+            result = product.scalars().first()
+            basket.total_price += int(result.price) * quantity
 
             basket_item = BasketItem(product_id=product_id,quantity=quantity,basket_id=basket.id,)
             session.add(basket_item)
@@ -102,7 +128,7 @@ async def add_basket_item(product_id:int, user_id:int, quantity:int):
 async def get_all_basket_items_with_products(user_id: int):
     async with async_session() as session:
         async with session.begin():
-            basket = await session.execute(select(Basket).where(Basket.user_id == user_id))
+            basket = await session.execute(select(Basket).where(Basket.user_id == user_id, Basket.ordered == False))
             basket = basket.scalars().first()
 
             if not basket:
@@ -133,6 +159,29 @@ async def delete_basket(basket_id: int):
             await session.commit()  # Commit the transaction
 
     return {"message": "Basket deleted successfully"}
+
+async def delete_basket_choose(user_id: int):
+    try:
+        async with async_session() as session:
+            async with session.begin():
+                # Fetch the basket for the user
+                basket_query = await session.execute(
+                    select(Basket).where(Basket.user_id == user_id,Basket.ordered==False)
+                )
+                basket = basket_query.scalars().first()
+                
+                if not basket:
+                    return {"success": False, "message": "Basket not found"}
+                
+                # Delete the basket
+                await session.delete(basket)
+                await session.flush()
+
+        return {"success": True, "message": "Basket deleted successfully"}
+
+    except Exception as e:
+        logging.error(f"Error deleting basket for user {user_id}: {e}")
+        return {"success": False, "message": "An error occurred while deleting the basket"}
 
 
 async def add_cart_quantity(basket_id: int):
@@ -169,9 +218,10 @@ async def get_basket_item(user_id:int):
             result = await session.execute(
                 select(BasketItem)
                 .join(Basket)  # Join the BasketItem with Basket
-                .where(BasketItem.ordered == False, Basket.user_id == user_id)
+                .where(BasketItem.ordered == False, Basket.user_id == user_id, )
             )
             return result.scalars().first()
+
 
 async def create_product(*args):
     async with async_session() as session:
@@ -186,12 +236,18 @@ async def get_product_by_litr(product_name: str):
         async with session.begin():
             result = await session.execute(select(Product).where(Product.name == product_name))
             product =  result.scalars().first()
-            return {'id':product.id,'image':product.image, 'price':product.price, 'name':product.name}
+            if product:
+                return {'id':product.id,'image':product.image, 'price':product.price, 'name':product.name}
+            return {'message':'Product not found'}
         
 
 async def create_order(*args, **kwargs):
     async with async_session() as session: 
         async with session.begin():
+            basket = await session.execute(select(Basket).where(Basket.id == kwargs['basket_id'], Basket.ordered == False))
+            basket_result = basket.scalar_one_or_none()
+            basket_result.ordered = True
+
             order = Order(**kwargs)
             session.add(order)
             await session.flush()
@@ -208,34 +264,42 @@ async def create_order(*args, **kwargs):
 async def get_basket(user_id:int):
     async with async_session() as session:
         async with session.begin():
-            basket = await session.execute(select(Basket).where(Basket.user_id==user_id))
+            basket = await session.execute(
+                select(Basket)
+                .where(Basket.user_id == user_id, Basket.ordered==False)
+            )
             result = basket.scalars().first()
-            return {'id':result.id}
+
+            if result:
+                return {'id': result.id}
+            return {'message': 'No basket found'}
         
 
 async def get_all_orders():
     async with async_session() as session:
         async with session.begin():
             # Perform the query to get both orders and basket items
+            
             query = (
-                select(Order, BasketItem)
-                .options(selectinload(BasketItem.product))
+                select(Order, BasketItem, User)
+                .options(selectinload(Order.user),
+                    selectinload(BasketItem.product))
                 .join(BasketItem, BasketItem.basket_id == Order.basket_id)
+                .join(User, User.tg_id == Order.user_id)
                 .where(BasketItem.ordered == True, Order.is_checked == False)
             )
 
             result = await session.execute(query)
 
-            # Process the result asynchronously
             order_items = {}
-            for order, basket_item in result.all():
-                # If the order is not already in the dictionary, add it
+            for order, basket_item, user in result.all():
                 if order.id not in order_items:
                     order_items[order.id] = {
                         'order_id': order.id,
-                        'company_name': order.company_name,
-                        'company_contact': order.company_contact,
+                        'company_name': user.company_name if user else None,
+                        'company_contact': user.phone_number if user else None,
                         'number_employee': order.number_employee,
+                        'location':order.location,
                         'time_drink': order.time_drink,
                         'created_at': order.created_at,
                         'products': []
@@ -303,3 +367,106 @@ async def order_make_done(order_id:int):
             result = await session.execute(select(Order).where(Order.id == order_id))
             order = result.scalars().first()
             order.is_checked = True
+
+
+async def last_order_repeat(user_id:int):
+    async with async_session() as session:
+        async with session.begin():
+
+            last_order_query = (
+                select(Order, User)
+                .options(selectinload(Order.user))
+                .where(Order.is_checked == True, Order.user_id == user_id)
+                .order_by(Order.created_at.desc())
+                .limit(1)  # Only fetch the latest order
+            )
+            last_order_result = await session.execute(last_order_query)
+            last_order,user = last_order_result.first()  # Get the last order or None
+            
+            if not last_order:
+                return None  # No orders found for the user
+            
+            # Step 2: Query all BasketItems and Products for the last order
+            basket_items_query = (
+                select(BasketItem)
+                .options(selectinload(BasketItem.product))
+                .where(BasketItem.basket_id == last_order.basket_id, BasketItem.ordered == True)
+            )
+            basket_items_result = await session.execute(basket_items_query)
+            basket_items = basket_items_result.scalars().all()
+            
+            # Step 3: Construct the response
+            order_item = {
+                'order_id': last_order.id,
+                'company_name':user.company_name,
+                'basket_id':last_order.basket_id,
+                'company_contact':user.phone_number,
+                'location':last_order.location,
+                'number_employee': last_order.number_employee,
+                'time_drink': last_order.time_drink,
+                'created_at': last_order.created_at,
+                'products': []
+            }
+            
+            for basket_item in basket_items:
+                product = basket_item.product
+                order_item['products'].append({
+                    'basket_id': basket_item.basket_id,
+                    'product_name': product.name,
+                    'quantity': basket_item.quantity,
+                    'price': product.price,
+                })
+            
+            return order_item
+        
+
+async def get_all_orders_done():
+    async with async_session() as session:
+        async with session.begin():
+            # Perform the query to get both orders and basket items
+            
+            query = (
+                select(Order, BasketItem, User)
+                .options(selectinload(Order.user),
+                    selectinload(BasketItem.product))
+                .join(BasketItem, BasketItem.basket_id == Order.basket_id)
+                .join(User, User.tg_id == Order.user_id)
+                .where(BasketItem.ordered == True, Order.is_checked == True)
+            )
+
+            result = await session.execute(query)
+
+            order_items = {}
+            for order, basket_item, user in result.all():
+                if order.id not in order_items:
+                    order_items[order.id] = {
+                        'order_id': order.id,
+                        'company_name': user.company_name if user else None,
+                        'company_contact': user.phone_number if user else None,
+                        'number_employee': order.number_employee,
+                        'location':order.location,
+                        'time_drink': order.time_drink,
+                        'created_at': order.created_at,
+                        'products': []
+                    }
+                # Append product details to the products list
+                product = basket_item.product
+                order_items[order.id]['products'].append({
+                    'basket_id': basket_item.basket_id,
+                    'product_name': product.name,
+                    'quantity': basket_item.quantity,
+                    'price': product.price,
+                })
+
+            # Convert to a list of orders
+            return list(order_items.values())
+        
+
+async def repeat_order_create(*args,**kwargs):
+    async with async_session() as session:
+        async with session.begin():
+            order = Order(**kwargs)
+            session.add(order)
+            await session.commit()
+
+

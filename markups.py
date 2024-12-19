@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 import database.requests as rq
-
+from utils.translation import translate as _
 import logging
 
 langMenu = ReplyKeyboardMarkup(
@@ -18,61 +18,70 @@ langMenu = ReplyKeyboardMarkup(
 ],resize_keyboard=True)
 
 
-keyboard_phone = ReplyKeyboardMarkup(
+def keyboard_phone(lang):
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="📱 Phone number", request_contact=True)
+            KeyboardButton(text=_("📱 Phone number",lang), request_contact=True)
         ]
     ],resize_keyboard=True)
 
 
-keyboard_location_input = ReplyKeyboardMarkup(
+def keyboard_location_input(lang):
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Tasdiqlayman"),
-            KeyboardButton(text="Qo'lda kiritaman")
+            KeyboardButton(text=_("Tasdiqlayman",lang)),
+            KeyboardButton(text=_("Qo'lda kiritaman",lang))
         ]
     ],resize_keyboard=True)
 
 
-keyboard_location = ReplyKeyboardMarkup(
+def keyboard_location(lang):
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Location", request_location=True)
+            KeyboardButton(text=_("Location",lang), request_location=True)
         ]
     ],resize_keyboard=True)
 
 
-main_keyboard = ReplyKeyboardMarkup(
+def main_keyboard(lang):
+ return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text = '💧 Mahsulotlar'),
-            KeyboardButton(text = '🛒 Korzinka'),
+            KeyboardButton(text = _('💧 Mahsulotlar',lang)),
+            KeyboardButton(text = _('🛒 Korzinka',lang)),
         ],
         [
-            KeyboardButton(text = '💴 Suv harid qlish'),
-            KeyboardButton(text = '🛠 Sozlamalar'),
+            KeyboardButton(text=_('Buyurtmani qayta takrorlash',lang))
+        ],
+        [
+            KeyboardButton(text = _('💴 Suv harid qlish',lang)),
+            KeyboardButton(text = _('🛠 Sozlamalar',lang)),
         ]
     ],resize_keyboard=True
 )
 
 
-change_lang = ReplyKeyboardMarkup(
+def change_lang(lang):
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='🇺🇿 Til')
+            KeyboardButton(text=_('🇺🇿 Til',lang)),
+            KeyboardButton(text=_('Back',lang))
         ]
     ], resize_keyboard=True
 )
 
-def get_order_keyboard_option(basket):
+def get_order_keyboard_option(basket,lang):
     buttons = []
     if basket:
-        buttons.append(KeyboardButton(text='I am holding my orders'))
+        buttons.append(KeyboardButton(text=_('Basket products',lang)))
     else:
         # If the basket is empty
-        buttons.append(KeyboardButton(text='Choose products'))
-    buttons.append(KeyboardButton(text='I choose your option'))
+        buttons.append(KeyboardButton(text=_('Choose products',lang)))
+    buttons.append(KeyboardButton(text=_('Recommandation products',lang)))
     
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[buttons],
@@ -80,7 +89,8 @@ def get_order_keyboard_option(basket):
     )
     return reply_markup
 
-quantity_water_keyboard = ReplyKeyboardMarkup(
+def quantity_water_keyboard(lang): 
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text='1'),
@@ -99,19 +109,45 @@ quantity_water_keyboard = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text='10'),
-            KeyboardButton(text='Back')
+            KeyboardButton(text=_('Back',lang))
         ]
     ],resize_keyboard=True, input_field_placeholder='Qiymat kiriting'
 )
 
-admin_keyboard = ReplyKeyboardMarkup(
+def admin_keyboard(lang):
+    return ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='Barcha mahsulotlar'),
-            KeyboardButton(text="Mahsulot qo'shish")
+            KeyboardButton(text=_('Barcha mahsulotlar',lang)),
+            KeyboardButton(text=_("Mahsulot qo'shish",lang))
         ],
         [
-            KeyboardButton(text='Barcha buyurtmalar')
+            KeyboardButton(text=_('Barcha buyurtmalar',lang)),
+            KeyboardButton(text=_('Buyurtmalar tarixi',lang))
         ]
     ],resize_keyboard=True, input_field_placeholder='Nimadir kiriting...'
+)
+
+
+def repeat_order(lang):
+    return ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text=_('Qayta takrorlash',lang)),
+            KeyboardButton(text = _('💴 Suv harid qlish',lang)),
+        ],
+        [
+            KeyboardButton(text=_('Back',lang))
+        ]
+    ],resize_keyboard=True
+)
+
+def user_type_keyboard(lang): 
+    return ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text=_('Jismoniy shaxs',lang)),
+            KeyboardButton(text=_('Yuridik shaxs',lang))
+        ]
+    ],resize_keyboard=True
 )
