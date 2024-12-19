@@ -66,7 +66,7 @@ async def company_name_regis(message:Message, state:FSMContext):
     if message.text in ['Yuridik shaxs','Legal entity','Юридическое лицо']:
         await state.set_state(UserFrom.company_name)
         await message.answer(_('Kompany nomini kiriting', user['language']))
-    elif message.text in ['Jismoniy shaxs','Indiviual','Физическое лицо']:
+    elif message.text in ['Jismoniy shaxs','Individual','Физическое лицо']:
         await state.update_data(company_name=None)
         await state.set_state(UserFrom.phone_number)
         await message.answer(_('Telefon raqamingizni kiriting',user['language']), reply_markup=btn.keyboard_phone(user['language']))
