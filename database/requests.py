@@ -36,7 +36,9 @@ async def get_user(tg_id: int):
         async with session.begin():
             result = await session.execute(select(User).filter(User.tg_id == tg_id))
             user = result.scalar_one_or_none()
-            return {'id': user.id, 'lang': user.language} if user else None
+            if user:
+                return {'id': user.id, 'lang': user.language} if user else None
+            return {'message':'Not found'}
         
 
 async def get_all_orders_user():
@@ -369,7 +371,7 @@ async def order_make_done(order_id:int):
             order.is_checked = True
 
 
-async def last_order_repeat(user_id:int):
+async def last_order_repeat(user_id:int,lang):
     async with async_session() as session:
         async with session.begin():
 
@@ -381,6 +383,9 @@ async def last_order_repeat(user_id:int):
                 .limit(1)  # Only fetch the latest order
             )
             last_order_result = await session.execute(last_order_query)
+            if not last_order_result.first():
+                return {'message':_('Sizda hali buyurtmalar yoq',lang)}
+            
             last_order,user = last_order_result.first()  # Get the last order or None
             
             if not last_order:

@@ -510,6 +510,12 @@ Narxi: {price}
             'en':'Product add basket successfully',
             'ru':'Товар успешно добавлен в корзину',
             'uz':"Mahsulot korzinkaga qo'shildi"
+        },
+        'Sizda hali buyurtmalar yoq':
+        {
+            'en':'You do not have orders',
+            'uz':'Sizda hali buyurtmalar yoq',
+            'ru':'У вас еще есть заказы'
         }
     }
 

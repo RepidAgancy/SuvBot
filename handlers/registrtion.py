@@ -29,9 +29,9 @@ class UserLang(StatesGroup):
 @regis_router.message(StateFilter(None), Command('start'))
 async def start_run(message: Message, state: FSMContext):
     user = await rq.get_user(tg_id=message.from_user.id)
-    if user:
+    if 'message' not in user :
         await message.answer(_("You are already on the page",user['lang']), reply_markup=btn.main_keyboard(user['lang']))
-    else:
+    elif user['message']:
         await state.set_state(UserFrom.language)
         await message.answer(
             "Til tanlang:",
@@ -63,7 +63,7 @@ async def company_name_regis(message:Message, state:FSMContext):
     user =await state.get_data()
     await state.update_data(user_type=message.text)
 
-    if message.text in ['Yuridik shaxs','Legel entity','Юридическое лицо']:
+    if message.text in ['Yuridik shaxs','Legal entity','Юридическое лицо']:
         await state.set_state(UserFrom.company_name)
         await message.answer(_('Kompany nomini kiriting', user['language']))
     elif message.text in ['Jismoniy shaxs','Physical person','Физическое лицо']:
@@ -82,7 +82,7 @@ async def comapny_name_regis(message:Message, state:FSMContext):
     await state.update_data(company_name=message.text)
 
     await state.set_state(UserFrom.phone_number)
-    await message.answer(_('Telefon raqam kiriting',user['language']), reply_markup=btn.keyboard_phone(user['lang']))
+    await message.answer(_('Telefon raqam kiriting',user['language']), reply_markup=btn.keyboard_phone(user['language']))
 
 
 
@@ -98,7 +98,7 @@ async def process_phone_number(message: Message, state: FSMContext):
     await state.update_data(phone_number=phone_number)
     data = await state.get_data()
     await rq.create_user(message.from_user.id, data['language'], data['phone_number'],data['company_name'],data['user_type'])
-    await message.answer(_("Botimizga xush kelibsiz",data['language']),reply_markup=await btn.main_keyboard(data['language']))
+    await message.answer(_("Botimizga xush kelibsiz",data['language']),reply_markup=btn.main_keyboard(data['language']))
 
     await state.clear()
 

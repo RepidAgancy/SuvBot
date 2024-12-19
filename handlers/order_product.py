@@ -49,7 +49,7 @@ async def order_company_locatiop(message:Message, state:FSMContext):
         await state.update_data(location=user_data.get("location"))    
         await message.answer(_("How many emplyee have",user['lang']))
         await state.set_state(Order.number_employee)
-    elif message.text == ["Qo'lda kiritaman",'Введите вручную','Write location']:
+    elif message.text in ["Qo'lda kiritaman",'Ввод вручную','Enter manually']:
         await message.answer(_("Qolda kirit",user['lang']))
         await state.set_state(Order.location_input)
     else:

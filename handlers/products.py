@@ -141,10 +141,11 @@ async def message_substract_cart(callback:CallbackQuery):
 
 @product_router.message(F.text.in_(['Buyurtmani qayta takrorlash','Повторить заказ','Repeat the order']))
 async def repeat_older_order(message:Message):
-    order_last = await rq.last_order_repeat(message.from_user.id)
     user = await rq.get_user(message.from_user.id)
-    if not order_last:
-        await message.answer('Sizda hali oxirga buyurtma yoq')
+    order_last = await rq.last_order_repeat(message.from_user.id,user['lang'])
+    
+    if 'message' in order_last:
+        await message.answer(_('Sizda hali buyurtmalar yoq',user['lang']))
         return 
     text =_(
         '''
@@ -187,7 +188,11 @@ async def repeat_older_order(message:Message):
 @product_router.message(F.text.in_(['Qayta takrorlash','Repeat once','Повторите еще раз']))
 async def repeat_order_once(message:Message):
     user = await rq.get_user(message.from_user.id)
-    order_last = await rq.last_order_repeat(message.from_user.id)
+    order_last = await rq.last_order_repeat(message.from_user.id,user['lang'])
+    if 'message' in order_last:
+        await message.answer(_('Sizda hali buyurtmalar yoq',user['lang']))
+        return 
+
     await rq.repeat_order_create(user_id=message.from_user.id,
                           basket_id = order_last['basket_id'],
                           number_employee = order_last['number_employee'],
