@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 import database.requests as rq
 import database.sync_to_async as syn
 
-ADMIN_IDS = [5714872865]
+ADMIN_IDS = [5714872865,1589263429]
 
 class ProductAdd(StatesGroup):
     name = State()
@@ -79,7 +79,7 @@ async def all_orders_admin(message:Message):
     orders = await rq.get_all_orders()
     messages_order = await syn.format_orders_for_message(orders)
 
-    if message not in orders:
+    if 'message' in orders:
         await message.answer('Hali buyurtmalar yoq')
         return 
     
