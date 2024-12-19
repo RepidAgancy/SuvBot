@@ -192,7 +192,7 @@ def translate(text, lang):
     "Jismoniy shaxs": {
         "uz": "Jismoniy shaxs",
         "ru": "Физическое лицо",
-        "en": "Individual"
+        "en": "Physical person"
     },
     "Yuridik shaxs": {
         "uz": "Yuridik shaxs",
