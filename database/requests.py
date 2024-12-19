@@ -292,6 +292,8 @@ async def get_all_orders():
             )
 
             result = await session.execute(query)
+            if not result.first():
+                return {'message':'Buyurtmalar hali yoq'}
 
             order_items = {}
             for order, basket_item, user in result.all():

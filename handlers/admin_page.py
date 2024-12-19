@@ -78,7 +78,10 @@ async def add_product_image(message:Message, state:FSMContext):
 async def all_orders_admin(message:Message):
     orders = await rq.get_all_orders()
     messages_order = await syn.format_orders_for_message(orders)
-    # logging.info(messages_order)
+
+    if message not in orders:
+        await message.answer('Hali buyurtmalar yoq')
+        return 
     
     for data, id in messages_order:
         await message.answer(data, reply_markup=InlineKeyboardMarkup(
