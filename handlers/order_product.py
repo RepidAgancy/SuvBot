@@ -162,7 +162,7 @@ async def order_product_quantity(message:Message, state:FSMContext):
             time_drink=data['time_drink_water'],
             location=data['location'],
             created_at=datetime.now(),
-            notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2)
+            notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2) + timedelta(minutes=1)
         )
         await state.clear() 
         await message.answer(
