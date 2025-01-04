@@ -154,11 +154,6 @@ def translate(text, lang):
         "ru": "Товары в корзине",
         "en": "Basket products"
     },
-    "Choose products": {
-        "uz": "Mahsulotlarni tanlang",
-        "ru": "Выберите продукты",
-        "en": "Choose products"
-    },
     "I choose your option": {
         "uz": "Men sizning variantingizni tanlayman",
         "ru": "Я выбираю ваш вариант",
@@ -516,6 +511,11 @@ Narxi: {price}
             'en':'You do not have orders',
             'uz':'Sizda hali buyurtmalar yoq',
             'ru':'У вас еще есть заказы'
+        },
+        'Choose products':{
+            'en':'Choose products',
+            'uz':'Mahsulot tanlash',
+            'ru':'Выбор продукта'                
         }
     }
 

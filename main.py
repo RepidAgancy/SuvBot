@@ -65,16 +65,11 @@ async def monitor_and_schedule_orders(bot: Bot):
                         )
                         scheduled_orders.add(order.id)
         
-        # Sleep for a short interval before checking again
-#         await asyncio.sleep(10)
-
-
-
 
 
 async def main():
-    # scheduler.start()
-    # asyncio.create_task(monitor_and_schedule_orders(bot))
+    scheduler.start()
+    asyncio.create_task(monitor_and_schedule_orders(bot))
     
     await dp.start_polling(bot)
     await async_main()
