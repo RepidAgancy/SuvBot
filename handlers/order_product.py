@@ -162,11 +162,11 @@ async def order_product_quantity(message:Message, state:FSMContext):
             time_drink=data['time_drink_water'],
             location=data['location'],
             created_at=datetime.now(),
-            notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2) + timedelta(minutes=1)
+            notify_user = datetime.now() + timedelta(days=int(data['time_drink_water'])-2)
         )
         await state.clear() 
         await message.answer(
-            _("Order successfully added! Delivery will take place in 2 days.",user['lang']),
+            _("Order successfully added, after 2 days later you will get",user['lang']),
             reply_markup=btn.main_keyboard(user['lang'])
         )
 

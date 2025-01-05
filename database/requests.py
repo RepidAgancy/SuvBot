@@ -281,29 +281,32 @@ async def get_all_orders():
     async with async_session() as session:
         async with session.begin():
             # Perform the query to get both orders and basket items
-            
             query = (
                 select(Order, BasketItem, User)
                 .options(selectinload(Order.user),
-                    selectinload(BasketItem.product))
+                         selectinload(BasketItem.product))
                 .join(BasketItem, BasketItem.basket_id == Order.basket_id)
                 .join(User, User.tg_id == Order.user_id)
                 .where(BasketItem.ordered == True, Order.is_checked == False)
             )
 
             result = await session.execute(query)
-            if not result.first():
-                return {'message':'Buyurtmalar hali yoq'}
+            rows = result.all()  
+            # Fetch all rows before session ends
 
+            if not rows:  # Check if no results
+                return {'message': 'Buyurtmalar hali yoq'}
+
+            # Process the data into the desired structure
             order_items = {}
-            for order, basket_item, user in result.all():
+            for order, basket_item, user in rows:
                 if order.id not in order_items:
                     order_items[order.id] = {
                         'order_id': order.id,
                         'company_name': user.company_name if user else None,
                         'company_contact': user.phone_number if user else None,
                         'number_employee': order.number_employee,
-                        'location':order.location,
+                        'location': order.location,
                         'time_drink': order.time_drink,
                         'created_at': order.created_at,
                         'products': []

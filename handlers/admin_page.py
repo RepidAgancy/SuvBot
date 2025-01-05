@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 import database.requests as rq
 import database.sync_to_async as syn
 
-ADMIN_IDS = [5714872865,1589263429]
+ADMIN_IDS = [5714872865]
 
 class ProductAdd(StatesGroup):
     name = State()
@@ -26,14 +26,20 @@ admin_router.message.filter(AdminFilter(admin_ids=ADMIN_IDS))
 
 @admin_router.message(Command("start"))
 async def run_as_admin(message: Message):
-    await message.answer('You are on the main page',reply_markup=btn.admin_keyboard)
+    await message.answer('You are on the main page',reply_markup=btn.admin_keyboard('uz'))
 
+
+from aiogram.types import InputFile
 
 @admin_router.message(F.text == 'Barcha mahsulotlar')
-async def all_products(message:Message):
+async def all_products(message: Message):
     products = await rq.get_all_products()
     for product in products:
-        await message.answer_photo(photo=product['image'], caption=f"Nomi: {product['name']}\nNarxi: {product['price']} so'm")
+        image = product['image']
+        try:
+            await message.answer_photo(photo=image, caption=f"Nomi: {product['name']}\nNarxi: {product['price']} so'm")
+        except Exception as e:
+            await message.answer(f"Mahsulotni yuborishda xatolik yuz berdi: {product['name']}\nXato: {e}")
 
 
 @admin_router.message(StateFilter(None), F.text=="Mahsulot qo'shish")
@@ -77,11 +83,10 @@ async def add_product_image(message:Message, state:FSMContext):
 @admin_router.message(F.text == 'Barcha buyurtmalar')
 async def all_orders_admin(message:Message):
     orders = await rq.get_all_orders()
-    messages_order = await syn.format_orders_for_message(orders)
-
-    if 'message' in orders:
+    if isinstance(orders, dict) and 'message' in orders:
         await message.answer('Hali buyurtmalar yoq')
         return 
+    messages_order = await syn.format_orders_for_message(orders)
     
     for data, id in messages_order:
         await message.answer(data, reply_markup=InlineKeyboardMarkup(
